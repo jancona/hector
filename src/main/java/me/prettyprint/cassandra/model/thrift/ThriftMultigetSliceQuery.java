@@ -3,7 +3,6 @@ package me.prettyprint.cassandra.model.thrift;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -29,7 +28,7 @@ import org.apache.cassandra.thrift.ColumnParent;
 public final class ThriftMultigetSliceQuery<K, N, V> extends AbstractSliceQuery<K, N, V, Rows<K, N, V>>
     implements MultigetSliceQuery<K, N, V> {
 
-  private Collection<K> keys;
+  private Iterable<K> keys;
 
   public ThriftMultigetSliceQuery(Keyspace k,
       Serializer<K> keySerializer,
@@ -45,6 +44,13 @@ public final class ThriftMultigetSliceQuery<K, N, V> extends AbstractSliceQuery<
   }
 
   @Override
+  public MultigetSliceQuery<K, N, V> setKeys(Iterable<K> keys) {
+    this.keys = keys;
+    return this;
+  }
+
+
+  @Override
   public QueryResult<Rows<K, N,V>> execute() {
     Assert.notNull(columnFamilyName, "columnFamilyName can't be null");
     Assert.notNull(keys, "keys can't be null");
@@ -53,11 +59,13 @@ public final class ThriftMultigetSliceQuery<K, N, V> extends AbstractSliceQuery<
         new KeyspaceOperationCallback<Rows<K, N,V>>() {
           @Override
           public Rows<K, N,V> doInKeyspace(KeyspaceService ks) throws HectorException {
-            List<K> keysList = new ArrayList<K>();
-            keysList.addAll(keys);
+            List<ByteBuffer> keysList = new ArrayList<ByteBuffer>();
+            for (K k : keys) {
+              keysList.add(keySerializer.toByteBuffer(k));
+            }
             ColumnParent columnParent = new ColumnParent(columnFamilyName);
             Map<K, List<Column>> thriftRet = keySerializer.fromBytesMap(
-                ks.multigetSlice(keySerializer.toBytesList(keysList), columnParent, getPredicate()));
+                ks.multigetSlice(keysList, columnParent, getPredicate()));
             return new RowsImpl<K, N, V>(thriftRet, columnNameSerializer, valueSerializer);
           }
         }), this);

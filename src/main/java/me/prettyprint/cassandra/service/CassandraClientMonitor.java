@@ -1,11 +1,10 @@
 package me.prettyprint.cassandra.service;
 
-import java.util.Collections;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 import me.prettyprint.cassandra.connection.ConcurrentHClientPool;
@@ -58,6 +57,7 @@ public class CassandraClientMonitor implements CassandraClientMonitorMBean {
   }
 
 
+  @Override
   public long getReadFail() {
     return counters.get(Counter.READ_FAIL).longValue();
   }
@@ -67,120 +67,123 @@ public class CassandraClientMonitor implements CassandraClientMonitorMBean {
   }
 
 
+  @Override
   public long getSkipHostSuccess() {
     return counters.get(Counter.SKIP_HOST_SUCCESS).longValue();
   }
 
 
+  @Override
   public long getRecoverableTimedOutCount() {
     return counters.get(Counter.RECOVERABLE_TIMED_OUT_EXCEPTIONS).longValue();
   }
 
 
+  @Override
   public long getRecoverableUnavailableCount() {
     return counters.get(Counter.RECOVERABLE_UNAVAILABLE_EXCEPTIONS).longValue();
   }
 
 
+  @Override
   public long getWriteFail() {
     return counters.get(Counter.WRITE_FAIL).longValue();
   }
 
 
+  @Override
   public void updateKnownHosts() throws HectorTransportException {
    log.info("Updating all known cassandra hosts on all clients");
-   /*
-    TODO is this a noop given retry service?
-   for (ConcurrentHClientPool pool: pools) {
-     pool.updateKnownHosts();
-   }
-   */
+
   }
 
 
+  @Override
   public long getNumPoolExhaustedEventCount() {
     return counters.get(Counter.POOL_EXHAUSTED).longValue();
   }
 
 
+  @Override
   public Set<String> getExhaustedPoolNames() {
     Set<String> ret = new HashSet<String>();
-    // TODO connectionManager...
+
     return ret;
   }
 
 
+  @Override
   public int getNumActive() {
     int ret = 0;
-    // TODO connectionmanager....
+    Collection<ConcurrentHClientPool> pools = connectionManager.getActivePools();
+    for (ConcurrentHClientPool concurrentHClientPool : pools) {
+      ret += concurrentHClientPool.getNumActive();
+    }
     return ret;
   }
 
 
+  @Override
   public int getNumBlockedThreads() {
     int ret = 0;
-    // TODO connectionManager...
+    Collection<ConcurrentHClientPool> pools = connectionManager.getActivePools();
+    for (ConcurrentHClientPool concurrentHClientPool : pools) {
+      ret += concurrentHClientPool.getNumBlockedThreads();
+    }
     return ret;
   }
 
 
+  @Override
   public int getNumExhaustedPools() {
-    int ret = 0;
-    // TODO connectionManager...
-    return ret;
+    return connectionManager.getDownedHosts().size();
   }
 
 
+  @Override
   public int getNumIdleConnections() {
     int ret = 0;
-    // TODO ?
+    Collection<ConcurrentHClientPool> pools = connectionManager.getActivePools();
+    for (ConcurrentHClientPool concurrentHClientPool : pools) {
+      ret += concurrentHClientPool.getNumIdle();
+    }
     return ret;
   }
 
 
+  @Override
   public int getNumPools() {
-    int ret = 0;
-    // TODO connectionManager....
-    return ret;
+    return connectionManager.getHosts().size();
   }
 
 
-  public Set<String> getPoolNames() {
-    Set<String> ret = new HashSet<String>();
-    // TODO connectionManager...
-    return ret;
-  }
 
-
+  @Override
   public Set<CassandraHost> getKnownHosts() {
-    Set<CassandraHost> ret = new HashSet<CassandraHost>();
-    // TODO connectionManager...
-    return ret;
+    return connectionManager.getHosts();
   }
 
 
+  @Override
   public long getRecoverableTransportExceptionCount() {
     return counters.get(Counter.RECOVERABLE_TRANSPORT_EXCEPTIONS).longValue();
   }
 
 
+  @Override
   public long getRecoverableErrorCount() {
     return getRecoverableTimedOutCount() + getRecoverableTransportExceptionCount() +
         getRecoverableUnavailableCount() + getRecoverableLoadBalancedConnectErrors();
   }
 
-  /*
-  public void addPool(CassandraClientPool pool) {
-    // TODO no longer germain?
-  }
-  */
 
-
+  @Override
   public long getRecoverableLoadBalancedConnectErrors() {
     return counters.get(Counter.RECOVERABLE_LB_CONNECT_ERRORS).longValue();
   }
 
 
+  @Override
   public long getNumConnectionErrors() {
     return counters.get(Counter.CONNECT_ERROR).longValue();
   }

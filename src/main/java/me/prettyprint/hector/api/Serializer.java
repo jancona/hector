@@ -31,6 +31,10 @@ public interface Serializer<T> {
    */  
   public ByteBuffer toByteBuffer(T obj);  
 
+  public byte[] toBytes(T obj);
+  
+  public T fromBytes(byte[] bytes);
+  
   /**
    * Extract an object of type T from the bytes.
    * @param bytes
@@ -46,6 +50,8 @@ public interface Serializer<T> {
 
   public <V> Map<T, V> fromBytesMap(Map<ByteBuffer, V> map);
 
-  List<ByteBuffer> toBytesList(List<T> list);
+  public List<ByteBuffer> toBytesList(List<T> list);
+
+  public List<T> fromBytesList(List<ByteBuffer> list);
 
 }

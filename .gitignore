@@ -8,3 +8,6 @@ tmp
 .project
 .settings
 .svn
+out
+*.ipr
+*.iws

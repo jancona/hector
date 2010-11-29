@@ -1,11 +1,9 @@
 package me.prettyprint.cassandra.service;
 
 import me.prettyprint.cassandra.connection.HConnectionManager;
-import me.prettyprint.hector.api.ddl.HKsDef;
+import me.prettyprint.hector.api.ConsistencyLevelPolicy;
 import me.prettyprint.hector.api.exceptions.HectorTransportException;
 
-import org.apache.cassandra.thrift.ConsistencyLevel;
-import org.apache.cassandra.thrift.KsDef;
 
 /**
  *
@@ -21,10 +19,11 @@ import org.apache.cassandra.thrift.KsDef;
   }
 
   public KeyspaceService create(String keyspaceName,
-      ConsistencyLevel consistencyLevel,
-      HConnectionManager connectionManager)
+      ConsistencyLevelPolicy consistencyLevel,
+      HConnectionManager connectionManager,
+      FailoverPolicy failoverPolicy)
       throws HectorTransportException {
     return new KeyspaceServiceImpl(keyspaceName, consistencyLevel,
-        connectionManager);
+        connectionManager, failoverPolicy);
   }
 }

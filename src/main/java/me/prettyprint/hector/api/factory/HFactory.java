@@ -28,13 +28,18 @@ import me.prettyprint.cassandra.model.thrift.ThriftSuperSliceQuery;
 import me.prettyprint.cassandra.serializers.StringSerializer;
 import me.prettyprint.cassandra.service.CassandraHost;
 import me.prettyprint.cassandra.service.CassandraHostConfigurator;
+import me.prettyprint.cassandra.service.FailoverPolicy;
+import me.prettyprint.cassandra.service.ThriftCfDef;
 import me.prettyprint.cassandra.service.ThriftCluster;
+import me.prettyprint.cassandra.service.ThriftKsDef;
 import me.prettyprint.hector.api.Cluster;
 import me.prettyprint.hector.api.ConsistencyLevelPolicy;
 import me.prettyprint.hector.api.Keyspace;
 import me.prettyprint.hector.api.Serializer;
 import me.prettyprint.hector.api.beans.HColumn;
 import me.prettyprint.hector.api.beans.HSuperColumn;
+import me.prettyprint.hector.api.ddl.ColumnFamilyDefinition;
+import me.prettyprint.hector.api.ddl.KeyspaceDefinition;
 import me.prettyprint.hector.api.mutation.Mutator;
 import me.prettyprint.hector.api.query.ColumnQuery;
 import me.prettyprint.hector.api.query.CountQuery;
@@ -86,17 +91,14 @@ public final class HFactory {
 
   public static Cluster getOrCreateCluster(String clusterName,
       CassandraHostConfigurator cassandraHostConfigurator) {
-    Cluster c = clusters.get(clusterName);
-    if (c == null) {
-      synchronized (clusters) {
-        c = clusters.get(clusterName);
-        if (c == null) {
-          c = createCluster(clusterName, cassandraHostConfigurator);
-          clusters.put(clusterName, c);
-        }
+    synchronized (clusters) {
+      Cluster c = clusters.get(clusterName);
+      if (c == null) {
+        c = createCluster(clusterName, cassandraHostConfigurator);
+        clusters.put(clusterName, c);
       }
+      return c;
     }
-    return c;
   }
 
   public static Cluster createCluster(String clusterName, CassandraHostConfigurator cassandraHostConfigurator) {
@@ -110,12 +112,19 @@ public final class HFactory {
    * @return
    */
   public static Keyspace createKeyspace(String keyspace, Cluster cluster) {
-    return createKeyspace(keyspace, cluster, createDefaultConsistencyLevelPolicy());
+    return createKeyspace(keyspace, cluster,
+        createDefaultConsistencyLevelPolicy(), FailoverPolicy.ON_FAIL_TRY_ALL_AVAILABLE);
   }
 
   public static Keyspace createKeyspace(String keyspace, Cluster cluster,
       ConsistencyLevelPolicy consistencyLevelPolicy) {
-    return new ExecutingKeyspace(keyspace, cluster.getConnectionManager(), consistencyLevelPolicy);
+    return createKeyspace(keyspace, cluster,
+        consistencyLevelPolicy, FailoverPolicy.ON_FAIL_TRY_ALL_AVAILABLE);
+  }
+
+  public static Keyspace createKeyspace(String keyspace, Cluster cluster,
+      ConsistencyLevelPolicy consistencyLevelPolicy, FailoverPolicy failoverPolicy) {
+    return new ExecutingKeyspace(keyspace, cluster.getConnectionManager(), consistencyLevelPolicy, failoverPolicy);
   }
 
   public static ConsistencyLevelPolicy createDefaultConsistencyLevelPolicy() {
@@ -222,7 +231,11 @@ public final class HFactory {
   /**
    * createSuperColumn accepts a variable number of column arguments
    * @param name supercolumn name
-   * @param createColumn a variable number of column arguments
+   * @param columns
+   * @param superNameSerializer
+   * @param nameSerializer
+   * @param valueSerializer
+   * @return
    */
   public static <SN,N,V> HSuperColumn<SN, N, V> createSuperColumn(SN name, List<HColumn<N,V>> columns,
       Serializer<SN> superNameSerializer, Serializer<N> nameSerializer, Serializer<V> valueSerializer) {
@@ -264,5 +277,13 @@ public final class HFactory {
    */
   public static long createClock() {
     return CassandraHost.DEFAULT_TIMESTAMP_RESOLUTION.createClock();
+  }
+
+  public static KeyspaceDefinition createKeyspaceDefinition(String keyspace) {
+    return new ThriftKsDef(keyspace);
+  }
+
+  public static ColumnFamilyDefinition createColumnFamilyDefinition(String keyspace, String cfName) {
+    return new ThriftCfDef(keyspace, cfName);
   }
 }
